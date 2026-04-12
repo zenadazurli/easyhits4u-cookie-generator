@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# get_cookies.py - Versione autonoma (hardcoded) per test su Render
+# get_cookies.py - Versione con log intermedi e attese maggiori
 
 import os
 import time
@@ -9,8 +9,7 @@ from supabase import create_client
 
 # ==================== CONFIGURAZIONE HARDCODATA ====================
 SUPABASE_URL = "https://ofijopixtpwahgbwyutc.supabase.co"
-SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9maWpvcGl4dHB3YWhnYnd5dXRjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDUwMjQwMCwiZXhwIjoyMDUwMDc4NDAwfQ.2mPQPwTlCK0JHbX27cOM8b_Sbu9KRtBXMVbOh46_o1o"   # <-- sostituisci con la tua vera service key
-
+SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9maWpvcGl4dHB3YWhnYnd5dXRjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTkyODIxMiwiZXhwIjoyMDkxNTA0MjEyfQ.BkWb8EuUUJSUUgg3sepDmOdUzsXY7pjGjykQnPMK9q4"  # <-- sostituisci
 ACCOUNT_NAME = "main"
 EASYHITS_EMAIL = "sandrominori50+uiszuzoqatr@gmail.com"
 EASYHITS_PASSWORD = "DDnmVV45!!"
@@ -21,7 +20,7 @@ BROWSERLESS_URL = "https://production-sfo.browserless.io/chrome/bql"
 VALID_KEYS = [
     "2TPBw78eoqITsdsc25e9ff6270092838010c06b1652627c8f",
     "2UB2mJ8Pu4KvAwya658a33c2af825bbe2f707870ba088d746",
-    # ... (inserisci qui tutte le tue 343 chiavi, una per riga)
+    # ... (inserisci tutte le tue chiavi)
 ]
 
 def log(msg):
@@ -67,8 +66,11 @@ def login_and_get_cookies(api_key):
         'Referer': REFERER_URL,
     }
     # GET homepage
-    session.get("https://www.easyhits4u.com/", headers=headers, verify=False, timeout=15)
-    time.sleep(1)
+    log("   🌐 GET homepage...")
+    r = session.get("https://www.easyhits4u.com/", headers=headers, verify=False, timeout=15)
+    log(f"      Homepage status: {r.status_code}")
+    time.sleep(2)
+    
     # POST login
     token = get_cf_token(api_key)
     if not token:
@@ -82,28 +84,44 @@ def login_and_get_cookies(api_key):
         'password': EASYHITS_PASSWORD,
         'cf-turnstile-response': token,
     }
+    log("   🌐 POST login...")
     login_resp = session.post("https://www.easyhits4u.com/logon/", data=data, headers=headers, allow_redirects=True, timeout=30)
-    if login_resp.status_code != 200:
-        return None
-    time.sleep(2)
+    log(f"      Login POST status: {login_resp.status_code}")
+    log(f"      Cookie dopo login: {session.cookies.get_dict()}")
+    time.sleep(3)
+    
     # GET /member/
-    session.get("https://www.easyhits4u.com/member/", headers=headers, verify=False, timeout=15)
-    time.sleep(1)
+    log("   🌐 GET /member/...")
+    r = session.get("https://www.easyhits4u.com/member/", headers=headers, verify=False, timeout=15)
+    log(f"      Member status: {r.status_code}")
+    log(f"      Cookie dopo member: {session.cookies.get_dict()}")
+    time.sleep(2)
+    
     # GET /surf/
-    session.get("https://www.easyhits4u.com/surf/", headers=headers, verify=False, timeout=15)
-    time.sleep(1)
+    log("   🌐 GET /surf/...")
+    r = session.get("https://www.easyhits4u.com/surf/", headers=headers, verify=False, timeout=15)
+    log(f"      Surf status: {r.status_code}")
+    log(f"      Cookie dopo surf: {session.cookies.get_dict()}")
+    time.sleep(2)
+    
     # GET referer
-    session.get(REFERER_URL, headers=headers, verify=False, timeout=15)
+    log("   🌐 GET referer...")
+    r = session.get(REFERER_URL, headers=headers, verify=False, timeout=15)
+    log(f"      Referer status: {r.status_code}")
+    
     cookies = session.cookies.get_dict()
+    log(f"   🍪 Cookie finali: {cookies}")
     if 'user_id' in cookies and 'sesids' in cookies:
         cookies['surftype'] = '2'
         cookie_string = '; '.join([f"{k}={v}" for k, v in cookies.items()])
         return cookie_string, cookies['user_id'], cookies['sesids']
-    return None
+    else:
+        log("   ❌ sesids non presente")
+        return None
 
 def main():
     log("=" * 50)
-    log("🚀 GENERATORE COOKIE (HARDCODED) - TEST SU RENDER")
+    log("🚀 GENERATORE COOKIE (LOG DETTAGLIATI)")
     log("=" * 50)
     supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
     for api_key in VALID_KEYS:
