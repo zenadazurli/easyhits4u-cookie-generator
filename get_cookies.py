@@ -10,7 +10,7 @@ from supabase import create_client
 
 # ==================== CONFIGURAZIONE ====================
 SUPABASE_URL = "https://ofijopixtpwahgbwyutc.supabase.co"
-SUPABASE_SERVICE_KEY = "LA_TUA_SERVICE_KEY_QUI"   # <-- SOSTITUISCI CON LA VERA
+SUPABASE_SERVICE_KEY = "LA_TUA_SERVICE_ROLE_KEY"   # <-- SOSTITUISCI CON LA VERA SERVICE KEY
 
 ACCOUNT_NAME = "main"
 
@@ -20,7 +20,12 @@ REFERER_URL = "https://www.easyhits4u.com/?ref=nicolacaporale"
 BROWSERLESS_URL = "https://production-sfo.browserless.io/chrome/bql"
 
 # ==================== CHIAVI VALIDE (343) ====================
-VALID_KEYS = [ ... ]  # (inserisci la lista completa qui)
+VALID_KEYS = [
+    "2TPBw78eoqITsdsc25e9ff6270092838010c06b1652627c8f",
+    "2UB2mJ8Pu4KvAwya658a33c2af825bbe2f707870ba088d746",
+    # ... (inserisci tutte le tue 343 chiavi, come nel tuo app.py funzionante)
+    "2UK4H7UqgcrwVhFbe98f5294c802fcd6a5ef288292cef6dfe"
+]
 
 def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
@@ -67,8 +72,10 @@ def login_and_get_cookies(api_key):
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
     }
+    # GET homepage
     session.get("https://www.easyhits4u.com/", headers=headers, verify=False, timeout=15)
     time.sleep(1)
+    # POST login
     token = get_cf_token(api_key)
     if not token:
         return None
@@ -88,10 +95,13 @@ def login_and_get_cookies(api_key):
     if login_resp.status_code != 200:
         return None
     time.sleep(2)
+    # GET /member/
     session.get("https://www.easyhits4u.com/member/", headers=headers, verify=False, timeout=15)
     time.sleep(1)
+    # GET /surf/
     session.get("https://www.easyhits4u.com/surf/", headers=headers, verify=False, timeout=15)
     time.sleep(1)
+    # GET referer
     session.get(REFERER_URL, headers=headers, verify=False, timeout=15)
     cookies = session.cookies.get_dict()
     if 'user_id' in cookies and 'sesids' in cookies:
