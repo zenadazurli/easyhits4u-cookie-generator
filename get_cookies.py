@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-# get_cookies.py - Versione con log intermedi e attese maggiori
+# get_cookies.py - Genera cookie e li salva su Supabase (versione hardcoded)
 
-import os
-import time
 import requests
+import json
+import time
+import os
 from datetime import datetime
 from supabase import create_client
 
 # ==================== CONFIGURAZIONE HARDCODATA ====================
 SUPABASE_URL = "https://ofijopixtpwahgbwyutc.supabase.co"
-SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9maWpvcGl4dHB3YWhnYnd5dXRjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTkyODIxMiwiZXhwIjoyMDkxNTA0MjEyfQ.BkWb8EuUUJSUUgg3sepDmOdUzsXY7pjGjykQnPMK9q4"  # <-- sostituisci
+SUPABASE_SERVICE_KEY = "la_tua_service_key"   # <-- SOSTITUISCI CON LA TUA
+
 ACCOUNT_NAME = "main"
-EASYHITS_EMAIL = "sandrominori50+uiszuzoqatr@gmail.com"
+
+# Credenziali EasyHits4U (le stesse che funzionano)
+EASYHITS_EMAIL = "sandrominori50+giorgiofaggiolini@gmail.com"
 EASYHITS_PASSWORD = "DDnmVV45!!"
 REFERER_URL = "https://www.easyhits4u.com/?ref=nicolacaporale"
 BROWSERLESS_URL = "https://production-sfo.browserless.io/chrome/bql"
@@ -20,7 +24,7 @@ BROWSERLESS_URL = "https://production-sfo.browserless.io/chrome/bql"
 VALID_KEYS = [
     "2TPBw78eoqITsdsc25e9ff6270092838010c06b1652627c8f",
     "2UB2mJ8Pu4KvAwya658a33c2af825bbe2f707870ba088d746",
-    # ... (inserisci tutte le tue chiavi)
+    # ... (inserisci tutte le tue 343 chiavi, come nel tuo script funzionante)
 ]
 
 def log(msg):
@@ -62,19 +66,22 @@ def login_and_get_cookies(api_key):
     session = requests.Session()
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/148.0',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Referer': REFERER_URL,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
     }
     # GET homepage
-    log("   🌐 GET homepage...")
-    r = session.get("https://www.easyhits4u.com/", headers=headers, verify=False, timeout=15)
-    log(f"      Homepage status: {r.status_code}")
-    time.sleep(2)
-    
+    session.get("https://www.easyhits4u.com/", headers=headers, verify=False, timeout=15)
+    time.sleep(1)
     # POST login
     token = get_cf_token(api_key)
     if not token:
         return None
+    login_headers = headers.copy()
+    login_headers['Content-Type'] = 'application/x-www-form-urlencoded'
+    login_headers['Referer'] = REFERER_URL
     data = {
         'manual': '1',
         'fb_id': '',
@@ -84,44 +91,28 @@ def login_and_get_cookies(api_key):
         'password': EASYHITS_PASSWORD,
         'cf-turnstile-response': token,
     }
-    log("   🌐 POST login...")
-    login_resp = session.post("https://www.easyhits4u.com/logon/", data=data, headers=headers, allow_redirects=True, timeout=30)
-    log(f"      Login POST status: {login_resp.status_code}")
-    log(f"      Cookie dopo login: {session.cookies.get_dict()}")
-    time.sleep(3)
-    
+    login_resp = session.post("https://www.easyhits4u.com/logon/", data=data, headers=login_headers, allow_redirects=True, timeout=30)
+    if login_resp.status_code != 200:
+        return None
+    time.sleep(2)
     # GET /member/
-    log("   🌐 GET /member/...")
-    r = session.get("https://www.easyhits4u.com/member/", headers=headers, verify=False, timeout=15)
-    log(f"      Member status: {r.status_code}")
-    log(f"      Cookie dopo member: {session.cookies.get_dict()}")
-    time.sleep(2)
-    
+    session.get("https://www.easyhits4u.com/member/", headers=headers, verify=False, timeout=15)
+    time.sleep(1)
     # GET /surf/
-    log("   🌐 GET /surf/...")
-    r = session.get("https://www.easyhits4u.com/surf/", headers=headers, verify=False, timeout=15)
-    log(f"      Surf status: {r.status_code}")
-    log(f"      Cookie dopo surf: {session.cookies.get_dict()}")
-    time.sleep(2)
-    
+    session.get("https://www.easyhits4u.com/surf/", headers=headers, verify=False, timeout=15)
+    time.sleep(1)
     # GET referer
-    log("   🌐 GET referer...")
-    r = session.get(REFERER_URL, headers=headers, verify=False, timeout=15)
-    log(f"      Referer status: {r.status_code}")
-    
+    session.get(REFERER_URL, headers=headers, verify=False, timeout=15)
     cookies = session.cookies.get_dict()
-    log(f"   🍪 Cookie finali: {cookies}")
     if 'user_id' in cookies and 'sesids' in cookies:
         cookies['surftype'] = '2'
         cookie_string = '; '.join([f"{k}={v}" for k, v in cookies.items()])
         return cookie_string, cookies['user_id'], cookies['sesids']
-    else:
-        log("   ❌ sesids non presente")
-        return None
+    return None
 
 def main():
     log("=" * 50)
-    log("🚀 GENERATORE COOKIE (LOG DETTAGLIATI)")
+    log("🚀 GENERATORE COOKIE -> SUPABASE")
     log("=" * 50)
     supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
     for api_key in VALID_KEYS:
@@ -130,6 +121,7 @@ def main():
         if result:
             cookie_string, uid, sid = result
             log(f"🎉 Cookie ottenuti! user_id={uid}, sesids={sid}")
+            # Upsert su Supabase (senza email/password per evitare NOT NULL)
             data = {
                 'account_name': ACCOUNT_NAME,
                 'cookie_string': cookie_string,
