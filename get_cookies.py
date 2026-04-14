@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# get_cookies.py - Legge TUTTE le chiavi da GitHub (senza limiti)
+# get_cookies.py - Legge TUTTE le chiavi da GitHub (nessun limite)
 
 import requests
 import json
@@ -23,24 +23,14 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ==================== CARICA TUTTE LE CHIAVI ====================
 def load_all_keys():
-    """Legge TUTTE le chiavi dal file, senza limiti"""
     print(f"📥 Download da: {KEYS_URL}")
     try:
         response = requests.get(KEYS_URL, timeout=30)
         if response.status_code == 200:
-            # Legge tutte le righe, nessun limite
-            all_lines = response.text.splitlines()
-            keys = []
-            for line in all_lines:
-                line = line.strip()
-                if line:  # solo righe non vuote
-                    keys.append(line)
-            print(f"📁 Caricate {len(keys)} chiavi da GitHub (TUTTE)")
-            # Mostra prime 3 e ultime 3 per debug
+            keys = [line.strip() for line in response.text.splitlines() if line.strip()]
+            print(f"📁 Caricate {len(keys)} chiavi da GitHub")
             if keys:
                 print(f"   Prime 3: {[k[:15] for k in keys[:3]]}")
-                if len(keys) > 6:
-                    print(f"   Ultime 3: {[k[:15] for k in keys[-3:]]}")
             return keys
         else:
             print(f"❌ Errore download: HTTP {response.status_code}")
