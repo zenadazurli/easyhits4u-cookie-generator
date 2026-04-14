@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# get_cookies.py - Prova TUTTE le chiavi da GitHub (senza filtri)
+# get_cookies.py - Chiavi hardcodate (come easyhits4u-login-complete)
 
 import requests
 import json
@@ -10,9 +10,22 @@ import threading
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-# ==================== CONFIGURAZIONE ====================
-KEYS_URL = "https://raw.githubusercontent.com/zenadazurli/easyhits4u-keys/refs/heads/main/chiavi.txt"
+# ==================== CHIAVI FUNZIONANTI (HARDCODATE) ====================
+VALID_KEYS = [
+    "2TPBw78eoqITsdsc25e9ff6270092838010c06b1652627c8f",
+    "2UB2mJ8Pu4KvAwya658a33c2af825bbe2f707870ba088d746",
+    "2UB6xXPVzalwmFrdf68265d93b745fd095899467d21a32326",
+    "2UB72G0jNe5RsxL6b2e845d0b94bb6897966e88f662bc99a7",
+    "2UCe01EH3vUJLnP6d3f028660d770ed840a0c6b05b6dcf71e",
+    "2UCyusO830dLAcyda29244c83c2bfa0217728908ff8810c42",
+    "2UD3pQCcge39YhQce5797773c8508515a295a1298d0105b42",
+    "2UDOf1dHJeNmeOl0a373211ade4280ba7e212cde93dfc9e20",
+    "2UDOnpiBIFokFEBcb1017abfdd901756272f2ff182c4a9f32",
+    "2UDPWeUf62vB2I8aa37152a5b515e5360c127d669b813f23c",
+    # Aggiungi qui tutte le altre chiavi funzionanti
+]
 
+# ==================== CONFIGURAZIONE ====================
 EASYHITS_EMAIL = "sandrominori50+uiszuzoqatr@gmail.com"
 EASYHITS_PASSWORD = "DDnmVV45!!"
 REFERER_URL = "https://www.easyhits4u.com/?ref=nicolacaporale"
@@ -20,28 +33,6 @@ BROWSERLESS_URL = "https://production-sfo.browserless.io/chrome/bql"
 
 OUTPUT_DIR = "/tmp/easyhits4u"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-# ==================== CARICA TUTTE LE CHIAVI ====================
-def load_all_keys():
-    """Legge TUTTE le chiavi dal file, senza alcun filtro"""
-    print(f"📥 Download da: {KEYS_URL}")
-    try:
-        response = requests.get(KEYS_URL, timeout=30)
-        if response.status_code == 200:
-            keys = [line.strip() for line in response.text.splitlines() if line.strip()]
-            print(f"📁 Caricate {len(keys)} chiavi da GitHub (TUTTE)")
-            # Mostra tutte le chiavi (prime 5 e ultime 5)
-            if keys:
-                print(f"   Prime 5: {[k[:15] for k in keys[:5]]}")
-                if len(keys) > 10:
-                    print(f"   Ultime 5: {[k[:15] for k in keys[-5:]]}")
-            return keys
-        else:
-            print(f"❌ Errore download: HTTP {response.status_code}")
-            return []
-    except Exception as e:
-        print(f"❌ Errore: {e}")
-        return []
 
 # ==================== SERVER HTTP ====================
 PORT = int(os.environ.get("PORT", 10000))
@@ -85,7 +76,6 @@ def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 def get_cf_token(api_key):
-    """Richiede il token a Browserless"""
     query = """
     mutation {
       goto(url: "https://www.easyhits4u.com/logon/", waitUntil: networkIdle, timeout: 60000) {
@@ -102,36 +92,25 @@ def get_cf_token(api_key):
     try:
         start = time.time()
         response = requests.post(url, json={"query": query}, headers={"Content-Type": "application/json"}, timeout=120)
-        
         if response.status_code != 200:
-            log(f"      ❌ HTTP {response.status_code}")
             return None
-        
         data = response.json()
         if "errors" in data:
-            log(f"      ❌ GraphQL error: {data['errors'][0].get('message', '')[:100]}")
             return None
-        
         solve_info = data.get("data", {}).get("solve", {})
         if solve_info.get("solved"):
             token = solve_info.get("token")
-            log(f"      ✅ Token ({time.time()-start:.1f}s)")
+            log(f"   ✅ Token ({time.time()-start:.1f}s)")
             return token
-        else:
-            log(f"      ❌ Token non ottenuto (solved=False)")
-            return None
-    except requests.exceptions.Timeout:
-        log(f"      ❌ Timeout dopo 120s")
         return None
     except Exception as e:
-        log(f"      ❌ Eccezione: {e}")
+        log(f"   ❌ Errore token: {e}")
         return None
 
 def build_cookie_string(cookies_dict):
     return '; '.join([f"{k}={v}" for k, v in cookies_dict.items()])
 
 def login_and_get_cookies(api_key):
-    """Tenta il login completo con una chiave"""
     session = requests.Session()
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/148.0',
@@ -142,21 +121,18 @@ def login_and_get_cookies(api_key):
         'Upgrade-Insecure-Requests': '1',
     }
     
+    # GET homepage
     log("   🌐 GET homepage...")
-    try:
-        home = session.get("https://www.easyhits4u.com/", headers=headers, verify=False, timeout=15)
-        log(f"      Homepage status: {home.status_code}")
-        time.sleep(1)
-    except Exception as e:
-        log(f"      ❌ Errore homepage: {e}")
-        return None, None, None
+    home = session.get("https://www.easyhits4u.com/", headers=headers, verify=False, timeout=15)
+    log(f"      Homepage status: {home.status_code}")
+    time.sleep(1)
     
-    log("   🔑 Richiedo token...")
+    # Token
     token = get_cf_token(api_key)
     if not token:
         return None, None, None
     
-    log("   🌐 POST login...")
+    # POST login
     login_headers = headers.copy()
     login_headers['Content-Type'] = 'application/x-www-form-urlencoded'
     login_headers['Referer'] = REFERER_URL
@@ -169,48 +145,33 @@ def login_and_get_cookies(api_key):
         'password': EASYHITS_PASSWORD,
         'cf-turnstile-response': token,
     }
-    try:
-        login_resp = session.post("https://www.easyhits4u.com/logon/", data=data, headers=login_headers, allow_redirects=True, timeout=30)
-        log(f"      Login POST status: {login_resp.status_code}")
-        time.sleep(2)
-    except Exception as e:
-        log(f"      ❌ Errore POST login: {e}")
-        return None, None, None
+    login_resp = session.post("https://www.easyhits4u.com/logon/", data=data, headers=login_headers, allow_redirects=True, timeout=30)
+    log(f"      Login POST status: {login_resp.status_code}")
+    time.sleep(2)
     
-    log("   🌐 GET /member/...")
-    try:
-        member = session.get("https://www.easyhits4u.com/member/", headers=headers, verify=False, timeout=15)
-        log(f"      Member status: {member.status_code}")
-        time.sleep(1)
-    except Exception as e:
-        log(f"      ❌ Errore member: {e}")
-        return None, None, None
+    # GET /member/
+    member = session.get("https://www.easyhits4u.com/member/", headers=headers, verify=False, timeout=15)
+    log(f"      Member status: {member.status_code}")
+    time.sleep(1)
     
-    log("   🌐 GET /surf/...")
-    try:
-        surf = session.get("https://www.easyhits4u.com/surf/", headers=headers, verify=False, timeout=15)
-        log(f"      Surf status: {surf.status_code}")
-        time.sleep(1)
-    except Exception as e:
-        log(f"      ❌ Errore surf: {e}")
-        return None, None, None
+    # GET /surf/
+    surf = session.get("https://www.easyhits4u.com/surf/", headers=headers, verify=False, timeout=15)
+    log(f"      Surf status: {surf.status_code}")
+    time.sleep(1)
     
-    log("   🌐 GET referer...")
-    try:
-        ref = session.get(REFERER_URL, headers=headers, verify=False, timeout=15)
-        log(f"      Referer status: {ref.status_code}")
-    except Exception as e:
-        log(f"      ⚠️ Errore referer: {e}")
+    # GET referer
+    ref = session.get(REFERER_URL, headers=headers, verify=False, timeout=15)
+    log(f"      Referer status: {ref.status_code}")
     
     cookies_dict = session.cookies.get_dict()
     log(f"   🍪 Cookie ricevuti: {list(cookies_dict.keys())}")
     
     if 'user_id' in cookies_dict and 'sesids' in cookies_dict:
-        log(f"   ✅✅✅ LOGIN COMPLETO! user_id={cookies_dict['user_id']}, sesids={cookies_dict['sesids']}")
+        log(f"   ✅✅✅ SUCCESSO! user_id={cookies_dict['user_id']}, sesids={cookies_dict['sesids']}")
         cookie_string = build_cookie_string(cookies_dict)
         return cookies_dict, cookie_string, session
     else:
-        log(f"   ❌ Login fallito: user_id={cookies_dict.get('user_id')}, sesids={cookies_dict.get('sesids')}")
+        log(f"   ❌ Login fallito: manca sesids")
         return None, None, None
 
 def save_cookies(cookies_dict, cookie_string, session):
@@ -227,33 +188,26 @@ def save_cookies(cookies_dict, cookie_string, session):
     with open(os.path.join(OUTPUT_DIR, "session_latest.pkl"), "wb") as f:
         pickle.dump(session, f)
     
-    print("   💾 Cookie salvati localmente")
+    print("   💾 Cookie salvati")
 
 def main():
     log("=" * 50)
-    log("🚀 GENERATORE COOKIE (TUTTE LE CHIAVI)")
+    log("🚀 GENERATORE COOKIE (CHIAVI HARDCODATE)")
     log("=" * 50)
+    log(f"🔑 Trovate {len(VALID_KEYS)} chiavi hardcodate")
     
-    keys = load_all_keys()
-    if not keys:
-        log("❌ Nessuna chiave caricata")
-        return
-    
-    log(f"🔑 Trovate {len(keys)} chiavi totali")
-    
-    for i, api_key in enumerate(keys, 1):
-        log(f"\n🔑 [{i}/{len(keys)}] Test: {api_key[:15]}...")
-        cookies_dict, cookie_string, session = login_and_get_cookies(api_key)
-        if cookies_dict:
-            log("🎉🎉🎉 SUCCESSO! Login riuscito!")
+    for i, api_key in enumerate(VALID_KEYS, 1):
+        log(f"\n🔑 [{i}/{len(VALID_KEYS)}] Test: {api_key[:15]}...")
+        result = login_and_get_cookies(api_key)
+        if result:
+            cookies_dict, cookie_string, session = result
+            log("🎉 SUCCESSO! Login riuscito!")
             save_cookies(cookies_dict, cookie_string, session)
-            log("✅ Cookie salvati.")
             log(f"   🌐 curl http://localhost:{PORT}/cookies")
-            # Rimane in esecuzione
             while True:
                 time.sleep(60)
         else:
-            log(f"   ❌ Fallito con questa chiave")
+            log(f"   ❌ Fallito")
     
     log("❌ Nessuna chiave funzionante")
     while True:
