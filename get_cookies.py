@@ -11,7 +11,6 @@ from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==================== CHIAVI FUNZIONANTI (HARDCODATE) ====================
-
 VALID_KEYS = [
     "2UKnWYAI4XjhlTbcc2b8d6928494d4a5f5542a74d00c06124",
     "2UKnXObX8RYBJ295ef966bc0a2342b47bba9e9e07f267d129",
@@ -32,6 +31,7 @@ VALID_KEYS = [
     "2UKoKWRM3NqPnvR4927430b0917be86ca0d88f5d33c83863d",
     "2UKoRweE2WuHvB00fccb9dcf28457f9ed811b6db1d409656f",
 ]
+
 # ==================== CONFIGURAZIONE ====================
 EASYHITS_EMAIL = "sandrominori50+uiszuzoqatr@gmail.com"
 EASYHITS_PASSWORD = "DDnmVV45!!"
@@ -137,7 +137,7 @@ def login_and_get_cookies(api_key):
     # Token
     token = get_cf_token(api_key)
     if not token:
-        return None, None, None
+        return None
     
     # POST login
     login_headers = headers.copy()
@@ -179,7 +179,7 @@ def login_and_get_cookies(api_key):
         return cookies_dict, cookie_string, session
     else:
         log(f"   ❌ Login fallito: manca sesids")
-        return None, None, None
+        return None
 
 def save_cookies(cookies_dict, cookie_string, session):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -206,13 +206,14 @@ def main():
     for i, api_key in enumerate(VALID_KEYS, 1):
         log(f"\n🔑 [{i}/{len(VALID_KEYS)}] Test: {api_key[:15]}...")
         result = login_and_get_cookies(api_key)
-        if result:
+        if result is not None:
             cookies_dict, cookie_string, session = result
-            log("🎉 SUCCESSO! Login riuscito!")
-            save_cookies(cookies_dict, cookie_string, session)
-            log(f"   🌐 curl http://localhost:{PORT}/cookies")
-            while True:
-                time.sleep(60)
+            if cookies_dict and cookie_string:
+                log("🎉 SUCCESSO! Login riuscito!")
+                save_cookies(cookies_dict, cookie_string, session)
+                log(f"   🌐 curl http://localhost:{PORT}/cookies")
+                while True:
+                    time.sleep(60)
         else:
             log(f"   ❌ Fallito")
     
