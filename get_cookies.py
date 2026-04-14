@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# get_cookies.py - Legge SOLO da GitHub, ignora Supabase
+# get_cookies.py - Legge TUTTE le chiavi da GitHub (senza limiti)
 
 import requests
 import json
@@ -11,10 +11,8 @@ from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ==================== CONFIGURAZIONE ====================
-# URL del file chiavi su GitHub (assicurati che sia quello giusto)
 KEYS_URL = "https://raw.githubusercontent.com/zenadazurli/easyhits4u-keys/refs/heads/main/chiavi.txt"
 
-# Credenziali EasyHits4U
 EASYHITS_EMAIL = "sandrominori50+uiszuzoqatr@gmail.com"
 EASYHITS_PASSWORD = "DDnmVV45!!"
 REFERER_URL = "https://www.easyhits4u.com/?ref=nicolacaporale"
@@ -23,17 +21,26 @@ BROWSERLESS_URL = "https://production-sfo.browserless.io/chrome/bql"
 OUTPUT_DIR = "/tmp/easyhits4u"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# ==================== CARICA CHIAVI DA GITHUB ====================
-def load_keys_from_github():
+# ==================== CARICA TUTTE LE CHIAVI ====================
+def load_all_keys():
+    """Legge TUTTE le chiavi dal file, senza limiti"""
     print(f"📥 Download da: {KEYS_URL}")
     try:
         response = requests.get(KEYS_URL, timeout=30)
         if response.status_code == 200:
-            keys = [line.strip() for line in response.text.splitlines() if line.strip()]
-            print(f"📁 Caricate {len(keys)} chiavi da GitHub")
-            # Stampa le prime 3 chiavi per debug
-            for i, k in enumerate(keys[:3]):
-                print(f"   {i+1}. {k[:20]}...")
+            # Legge tutte le righe, nessun limite
+            all_lines = response.text.splitlines()
+            keys = []
+            for line in all_lines:
+                line = line.strip()
+                if line:  # solo righe non vuote
+                    keys.append(line)
+            print(f"📁 Caricate {len(keys)} chiavi da GitHub (TUTTE)")
+            # Mostra prime 3 e ultime 3 per debug
+            if keys:
+                print(f"   Prime 3: {[k[:15] for k in keys[:3]]}")
+                if len(keys) > 6:
+                    print(f"   Ultime 3: {[k[:15] for k in keys[-3:]]}")
             return keys
         else:
             print(f"❌ Errore download: HTTP {response.status_code}")
@@ -216,18 +223,18 @@ def save_cookies(cookies_dict, cookie_string, session):
 
 def main():
     log("=" * 50)
-    log("🚀 GENERATORE COOKIE (SOLO DA GITHUB)")
+    log("🚀 GENERATORE COOKIE (TUTTE LE CHIAVI DA GITHUB)")
     log("=" * 50)
     
-    KEYS = load_keys_from_github()
-    if not KEYS:
+    keys = load_all_keys()
+    if not keys:
         log("❌ Nessuna chiave caricata")
         return
     
-    log(f"🔑 Trovate {len(KEYS)} chiavi")
+    log(f"🔑 Trovate {len(keys)} chiavi (nessun limite)")
     
-    for api_key in KEYS:
-        log(f"🔑 Tentativo con chiave: {api_key[:15]}...")
+    for i, api_key in enumerate(keys, 1):
+        log(f"🔑 [{i}/{len(keys)}] Tentativo con chiave: {api_key[:15]}...")
         cookies_dict, cookie_string, session = login_and_get_cookies(api_key)
         if cookies_dict:
             log("🎉 Login e navigazione riusciti! Salvo cookie...")
