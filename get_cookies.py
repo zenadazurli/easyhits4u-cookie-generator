@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# get_cookies.py - Genera cookie con chiavi da file txt su GitHub
+# get_cookies.py - Legge SOLO da GitHub, ignora Supabase
 
 import requests
 import json
@@ -9,17 +9,12 @@ import pickle
 import threading
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from supabase import create_client
 
 # ==================== CONFIGURAZIONE ====================
-# URL del file chiavi su GitHub
+# URL del file chiavi su GitHub (assicurati che sia quello giusto)
 KEYS_URL = "https://raw.githubusercontent.com/zenadazurli/easyhits4u-keys/refs/heads/main/chiavi.txt"
 
-# Supabase (per salvare i cookie)
-SUPABASE_COOKIES_URL = "https://ofijopixtpwahgbwyutc.supabase.co"
-SUPABASE_COOKIES_SERVICE_KEY = "la_tua_service_key"
-
-ACCOUNT_NAME = "main"
+# Credenziali EasyHits4U
 EASYHITS_EMAIL = "sandrominori50+uiszuzoqatr@gmail.com"
 EASYHITS_PASSWORD = "DDnmVV45!!"
 REFERER_URL = "https://www.easyhits4u.com/?ref=nicolacaporale"
@@ -30,11 +25,15 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ==================== CARICA CHIAVI DA GITHUB ====================
 def load_keys_from_github():
+    print(f"📥 Download da: {KEYS_URL}")
     try:
         response = requests.get(KEYS_URL, timeout=30)
         if response.status_code == 200:
             keys = [line.strip() for line in response.text.splitlines() if line.strip()]
             print(f"📁 Caricate {len(keys)} chiavi da GitHub")
+            # Stampa le prime 3 chiavi per debug
+            for i, k in enumerate(keys[:3]):
+                print(f"   {i+1}. {k[:20]}...")
             return keys
         else:
             print(f"❌ Errore download: HTTP {response.status_code}")
@@ -130,7 +129,6 @@ def login_and_get_cookies(api_key):
         'Upgrade-Insecure-Requests': '1',
     }
     
-    # GET homepage
     log("   🌐 GET homepage...")
     try:
         home = session.get("https://www.easyhits4u.com/", headers=headers, verify=False, timeout=15)
@@ -140,12 +138,10 @@ def login_and_get_cookies(api_key):
         log(f"      ❌ Errore homepage: {e}")
         return None, None, None
     
-    # Token
     token = get_cf_token(api_key)
     if not token:
         return None, None, None
     
-    # POST login
     login_headers = headers.copy()
     login_headers['Content-Type'] = 'application/x-www-form-urlencoded'
     login_headers['Referer'] = REFERER_URL
@@ -166,7 +162,6 @@ def login_and_get_cookies(api_key):
         log(f"      ❌ Errore POST login: {e}")
         return None, None, None
     
-    # GET /member/
     log("   🌐 GET /member/...")
     try:
         member = session.get("https://www.easyhits4u.com/member/", headers=headers, verify=False, timeout=15)
@@ -176,7 +171,6 @@ def login_and_get_cookies(api_key):
         log(f"      ❌ Errore member: {e}")
         return None, None, None
     
-    # GET /surf/
     log("   🌐 GET /surf/...")
     try:
         surf = session.get("https://www.easyhits4u.com/surf/", headers=headers, verify=False, timeout=15)
@@ -186,7 +180,6 @@ def login_and_get_cookies(api_key):
         log(f"      ❌ Errore surf: {e}")
         return None, None, None
     
-    # GET referer
     log("   🌐 GET referer...")
     try:
         ref = session.get(REFERER_URL, headers=headers, verify=False, timeout=15)
@@ -208,7 +201,6 @@ def login_and_get_cookies(api_key):
 def save_cookies(cookies_dict, cookie_string, session):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # Salvataggio locale
     with open(os.path.join(OUTPUT_DIR, f"cookies_{timestamp}.json"), "w") as f:
         json.dump(cookies_dict, f, indent=2)
     with open(os.path.join(OUTPUT_DIR, f"cookie_string_{timestamp}.txt"), "w") as f:
@@ -220,24 +212,11 @@ def save_cookies(cookies_dict, cookie_string, session):
     with open(os.path.join(OUTPUT_DIR, "session_latest.pkl"), "wb") as f:
         pickle.dump(session, f)
     
-    # Salvataggio su Supabase
-    try:
-        supabase = create_client(SUPABASE_COOKIES_URL, SUPABASE_COOKIES_SERVICE_KEY)
-        supabase.table('account_cookies').upsert({
-            'account_name': ACCOUNT_NAME,
-            'cookie_string': cookie_string,
-            'user_id': cookies_dict['user_id'],
-            'sesids': cookies_dict['sesids'],
-            'status': 'active',
-            'updated_at': datetime.now().isoformat()
-        }, on_conflict='account_name').execute()
-        log("   💾 Cookie salvati su Supabase")
-    except Exception as e:
-        log(f"   ⚠️ Errore salvataggio Supabase: {e}")
+    print("   💾 Cookie salvati localmente")
 
 def main():
     log("=" * 50)
-    log("🚀 GENERATORE COOKIE (CHIAVI DA GITHUB)")
+    log("🚀 GENERATORE COOKIE (SOLO DA GITHUB)")
     log("=" * 50)
     
     KEYS = load_keys_from_github()
