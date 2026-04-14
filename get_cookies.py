@@ -10,24 +10,31 @@ import threading
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-# ==================== CHIAVI VALIDE (FUNZIONANTI) ====================
+# ==================== CHIAVI VALIDE ====================
 VALID_KEYS = [
-    "2TPBw78eoqITsdsc25e9ff6270092838010c06b1652627c8f",
-    "2UB2mJ8Pu4KvAwya658a33c2af825bbe2f707870ba088d746",
-    "2UB6xXPVzalwmFrdf68265d93b745fd095899467d21a32326",
-    "2UB72G0jNe5RsxL6b2e845d0b94bb6897966e88f662bc99a7",
-    "2UCe01EH3vUJLnP6d3f028660d770ed840a0c6b05b6dcf71e",
-    "2UCyusO830dLAcyda29244c83c2bfa0217728908ff8810c42",
-    "2UD3pQCcge39YhQce5797773c8508515a295a1298d0105b42",
-    "2UDOf1dHJeNmeOl0a373211ade4280ba7e212cde93dfc9e20",
-    "2UDOnpiBIFokFEBcb1017abfdd901756272f2ff182c4a9f32",
-    "2UDPWeUf62vB2I8aa37152a5b515e5360c127d669b813f23c",
+    "2UKnWYAI4XjhlTbcc2b8d6928494d4a5f5542a74d00c06124",
+    "2UKnXObX8RYBJ295ef966bc0a2342b47bba9e9e07f267d129",
+    "2UKnZUgK5OICl9Tc02c85cc0d4272328dbb2f69636e31e49f",
+    "2UKnbvt91chXu5k4eeaf9dac4dec56392775bfc3d0f2bf5b0",
+    "2UKnex0F79iSOfgc76b35051414ec0c29974df1b6273bb037",
+    "2UKnoI5dfbaqB5W71071e88ff897ee16f5c09566cac51043f",
+    "2UKnwp0jDBj6L394f1f5d6b3b9be3db83ff2b75f359479b99",
+    "2UKnxh5NTuseSDqf61c86934ec2bc68cdec73d44fdccce106",
+    "2UKnzzEOtKeedO830957353ce0de6a17c94ce2f5b684463e9",
+    "2UKo1s5wjiBFm1kbc0cdca7b0264e264470bcf92167a8d8b3",
+    "2UKo2MAf1hz67Pma6ae81ea276974e4abd1d5c6049fe30562",
+    "2UKo41T4eBxMroO972f754c66c5c24a4115fc8bf8e73cb163",
+    "2UKo53fcth6cQbX24ba80659d5397546d67080ff7977b0719",
+    "2UKo7MFmnuhLQBl2fb827baa83359d5c509e765c052fbe563",
+    "2UKo8NOjaRRABF829743dddff0d99b3d7e4d6f1bdf47a6b1e",
+    "2UKoJa4UH2qXOE82abaef4a28adf70bbf170d1806e513255f",
+    "2UKoKWRM3NqPnvR4927430b0917be86ca0d88f5d33c83863d",
+    "2UKoRweE2WuHvB00fccb9dcf28457f9ed811b6db1d409656f",
 ]
-
 BROWSERLESS_URL = "https://production-sfo.browserless.io/chrome/bql"
 
 # CREDENZIALI
-EASYHITS_EMAIL = "sandrominori50+uiszuzoqatr@gmail.com"
+EASYHITS_EMAIL = "sandrominori50+giorgiofaggiolini@gmail.com"
 EASYHITS_PASSWORD = "DDnmVV45!!"
 REFERER_URL = "https://www.easyhits4u.com/?ref=nicolacaporale"
 
@@ -64,7 +71,7 @@ class CookieHandler(BaseHTTPRequestHandler):
             self.end_headers()
     
     def log_message(self, format, *args):
-        pass
+        pass  # silenzia i log del server
 
 def start_http_server():
     global server_running
@@ -76,8 +83,10 @@ def start_http_server():
     except Exception as e:
         print(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Errore avvio server: {e}")
 
-# Avvia il server in un thread separato
+# Avvia il server in un thread separato (non blocca il resto)
 threading.Thread(target=start_http_server, daemon=True).start()
+
+# Attendi che il server sia pronto (opzionale)
 time.sleep(1)
 
 # ==================== FUNZIONI ====================
@@ -143,7 +152,7 @@ def login_and_get_complete_cookies(api_key):
     # 2. Token
     token = get_cf_token(api_key)
     if not token:
-        return None, None, None
+        return None, None, None   # CORRETTO: 3 valori
     
     # 3. POST login
     login_headers = headers.copy()
@@ -250,7 +259,7 @@ def main():
             log("✅ Fatto. Cookie salvati in /tmp/easyhits4u/")
             log(f"   🌐 Per scaricare l'ultima stringa cookie, usa: curl http://localhost:{PORT}/cookies")
             log("   ⚠️ Il servizio rimane in esecuzione per servire il file. Premi Ctrl+C per fermarlo.")
-            # Mantieni il processo vivo
+            # Mantieni il processo vivo per servire il file
             while True:
                 time.sleep(60)
         else:
